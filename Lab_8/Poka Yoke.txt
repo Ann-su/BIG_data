@@ -1,0 +1,7 @@
+Poka Yoke
+
+1. Automatyczna walidacja danych wejściowych - Na samym początku potoku odbywa się sprawdzenie poprawności danych, co natychmiast wykrywa i blokuje dane niezgodne z oczekiwanym formatem lub zakresem.
+2. Wymuszone wykonywanie kroków w ustalonej kolejności - Każdy etap potoku jest ściśle powiązany z poprzednim i kolejnym, co uniemożliwia przypadkowe pominięcie lub zamianę kolejności operacji.
+3. Standaryzacja interfejsów i formatów danych - Ujednolicenie sposobu przekazywania danych i komunikacji pomiędzy komponentami pipeline’u ogranicza liczbę błędów wynikających z niespójności.
+4. Mechanizmy zabezpieczające krytyczne operacje (foolproof) - Dla szczególnie wrażliwych zadań wprowadza się dodatkowe kontrole, potwierdzenia lub warunki brzegowe, które uniemożliwiają wykonanie nieprawidłowych działań.
+5. Wbudowane mechanizmy autodiagnostyki i raportowania błędów - Pipeline sam monitoruje swój stan, a w przypadku problemów generuje szczegółowe i czytelne komunikaty, co umożliwia szybką reakcję i naprawę.
