@@ -1,0 +1,99 @@
+Zadanie 2: Wybór Technologii - Składowanie Danych w Databricks: Porównanie Delta Lake i Iceberg
+
+Delta Lake i Apache Iceberg to dwie wiodące technologie tabelarycznych formatów danych (Table Formats) w ekosystemie Lakehouse, które dodają transakcyjność (ACID), schematy, wersjonowanie i inne funkcje do danych przechowywanych w jeziorze danych (np. Azure Data Lake Storage). Poniżej przedstawiono porównanie i scenariusze optymalnego użycia.
+
+Delta Lake
+
+    Pochodzenie: Opracowany przez Databricks, otwartoźródłowy od 2019 roku.
+    Charakterystyka:
+        Transakcje ACID: Zapewnia atomowość, spójność, izolację i trwałość dla operacji na danych.
+        Schemat Enforcment i Evolution: Umożliwia wymuszanie schematów i ewolucję schematów (dodawanie/usuwanie kolumn) bez utraty danych.
+        Wersjonowanie danych (Time Travel): Pozwala na odpytywanie starszych wersji tabel, cofanie zmian (rollback) i audytowanie.
+        Upserts (MERGE INTO): Efektywne aktualizacje i wstawki danych.
+        Zarządzanie plikami: Automatyczne kompaktowanie małych plików (compaction) i zarządzanie metadanymi.
+        Integracja: Głęboka integracja z Apache Spark (szczególnie w Databricks), ale wspiera również inne silniki (Presto, Flink).
+        Optymalizacje: Z-Ordering (sortowanie danych w celu poprawy wydajności zapytań), Bloom Filters.
+    Scenariusze optymalne dla Delta Lake:
+        Azure Databricks: Jeśli Państwa główną platformą przetwarzania jest Azure Databricks, Delta Lake jest naturalnym i najbardziej zoptymalizowanym wyborem. Databricks aktywnie rozwija i wspiera Delta Lake, oferując najlepszą wydajność i integrację.
+        Złożone transformacje ETL/ELT: Kiedy wymagane są częste aktualizacje, usuwanie danych, operacje MERGE (np. w scenariuszach Data Warehousing lub do budowy warstwy Silver/Gold), Delta Lake z funkcjami ACID jest idealne.
+        Potrzeba spójności danych: W scenariuszach, gdzie spójność danych jest krytyczna (np. finanse, raportowanie regulacyjne), transakcje ACID Delta Lake są kluczowe.
+        Wersjonowanie i audytowanie danych: Jeśli wymagane jest śledzenie zmian w danych, możliwość powrotu do poprzednich wersji lub audytowanie danych historycznych, funkcje Time Travel są bardzo wartościowe.
+        Mieszane obciążenia (Streaming i Batch): Delta Lake jest zaprojektowany do obsługi zarówno strumieniowych, jak i wsadowych obciążeń danych na tych samych tabelach, co upraszcza architekturę.
+
+Apache Iceberg
+
+    Pochodzenie: Opracowany w Netflix, również otwartoźródłowy.
+    Charakterystyka:
+        Transakcje ACID: Podobnie jak Delta Lake, zapewnia transakcyjność ACID.
+        Schemat Ewolucji: Obsługuje ewolucję schematów w bezpieczny sposób.
+        Wersjonowanie danych: Posiada mechanizmy wersjonowania, choć implementacja może się różnić.
+        Ukryte partycjonowanie (Hidden Partitioning): Pozwala na zmianę strategii partycjonowania bez przepisywania danych, co jest dużą zaletą w zarządzaniu dużymi tabelami.
+        Unifikacja silników: Zaprojektowany z myślą o interoperacyjności z wieloma silnikami query (Spark, Flink, Presto, Trino, Hive, Dremio), co czyni go bardziej niezależnym od dostawcy i ekosystemu.
+        Filtracja na poziomie pliku: Efektywna filtracja danych na podstawie metadanych.
+    Scenariusze optymalne dla Apache Iceberg:
+        Multi-Engine Environment: Jeśli Państwa Lakehouse ma być dostępny i przetwarzany przez różne silniki query (nie tylko Databricks/Spark, ale także np. Presto/Trino dla ad-hoc analizy, Flink dla strumieniowania), Iceberg oferuje lepszą interoperacyjność.
+        Unikanie Vendor Lock-in: Dla klientów, którzy chcą być bardziej niezależni od konkretnego dostawcy technologii (Databricks w przypadku Delta Lake), Iceberg może być bardziej atrakcyjny.
+        Dynamiczne partycjonowanie: W przypadku dużych tabel, gdzie partycjonowanie musi być często optymalizowane lub zmieniane bez kosztownych operacji przepisywania danych, ukryte partycjonowanie Iceberg jest bardzo korzystne.
+        Migracja danych między systemami: Jeśli planują Państwo migrację danych między różnymi platformami lub systemami w przyszłości, uniwersalność Iceberg może to ułatwić.
+        Społeczność Open Source: Iceberg ma silną, rozwijającą się społeczność open source, co może być ważne dla niektórych organizacji.
+
+Podsumowanie i rekomendacja:
+
+Dla Państwa scenariusza, w którym wyraźnie wskazano Azure Databricks jako platformę przetwarzania, Delta Lake będzie bardziej optymalnym wyborem. Wynika to z:
+
+    Głębokiej integracji i optymalizacji z Databricks: Delta Lake jest natywnym formatem tabelarycznym dla Databricks, co zapewnia najlepszą wydajność, łatwość użycia i dostęp do zaawansowanych funkcji (np. Photon Engine, Delta Live Tables).
+    Szerokiego wsparcia w ekosystemie Azure Databricks: Większość narzędzi i funkcji Databricks jest zaprojektowana z myślą o Delta Lake.
+    Funkcjonalności niezbędnych dla Lakehouse: Delta Lake dostarcza wszystkie kluczowe funkcje (ACID, schemat evolution, time travel, upserts), które są fundamentalne dla architektury Lakehouse i scenariuszy ETL/ELT.
+
+Iceberg byłby bardziej rozważany, gdyby istniała potrzeba operowania na danych z wielu różnych silników analitycznych poza Databricks lub w przypadku silnej polityki unikania vendor lock-in. Jednak w kontekście mocno zorientowanym na Azure Databricks, Delta Lake jest standardem i najbardziej efektywnym rozwiązaniem.
+Zadanie 3: Krytyka Architektury Medalionu
+
+Architektura medalionu (Medallion Architecture), często nazywana również architekturą warstwową (Layered Architecture) lub trójwarstwową (Bronze, Silver, Gold), jest popularnym wzorcem projektowym dla jezior danych (Data Lakes) i Lakehouse, promującym strukturyzację danych od surowych do wyrafinowanych. Chociaż ma wiele zalet, nie jest to rozwiązanie uniwersalne i posiada pewne wady lub scenariusze, w których może być nadmiernie skomplikowana. Oto 20 punktów krytyki architektury medalionu:
+
+    Złożoność początkowa dla małych projektów:
+        Opis: Dla mniejszych projektów lub zespołów o ograniczonych zasobach, implementacja trzech oddzielnych warstw (Bronze, Silver, Gold) może być nadmiernie skomplikowana i czasochłonna na początku, opóźniając dostarczenie wartości.
+    Narzut na zarządzanie i monitorowanie:
+        Opis: Każda dodatkowa warstwa wymaga zarządzania potokami danych, schematami, uprawnieniami i monitorowaniem, co zwiększa ogólny narzut operacyjny.
+    Redundancja danych i koszt przechowywania:
+        Opis: Dane są powielane w różnych warstwach (przynajmniej częściowo), co może prowadzić do redundancji i zwiększonych kosztów przechowywania, szczególnie w przypadku bardzo dużych wolumenów danych.
+    Opóźnienie w dostępie do danych (latency):
+        Opis: Przechodzenie danych przez wiele warstw (Bronze -> Silver -> Gold) wprowadza opóźnienia, co może być problemem dla scenariuszy wymagających danych w czasie zbliżonym do rzeczywistego.
+    Potencjalne problemy z synchronizacją:
+        Opis: Utrzymywanie spójności i synchronizacji danych między warstwami może być wyzwaniem, zwłaszcza w przypadku nagłych zmian w danych źródłowych lub błędów w potokach.
+    "Big ball of mud" w warstwie Silver/Gold:
+        Opis: Bez rygorystycznego zarządzania, warstwa Silver lub Gold może stać się "big ball of mud", gdzie logika biznesowa jest pomieszana, a schematy niestabilne, utrudniając dalszy rozwój.
+    Nadmierne uogólnienie dla różnych typów danych:
+        Opis: Architektura medalionu jest zoptymalizowana dla danych strukturalnych i półstrukturalnych. Dla danych niestrukturalnych (np. obrazów, wideo, swobodnego tekstu) lub danych binarnych, podejście medalionu może być nieefektywne lub niepotrzebne.
+    Wyzwania związane z zarządzaniem metadanymi:
+        Opis: Wzrost liczby warstw i tabel w każdej warstwie wymaga solidnego zarządzania metadanymi (data catalog), co często jest pomijane na początku projektu.
+    Ograniczona elastyczność w niestandardowych przepływach danych:
+        Opis: Sztywna struktura medalionu może utrudniać implementację niestandardowych przepływów danych, które nie pasują do typowej sekwencji Bronze -> Silver -> Gold.
+    Bariery dla eksploracji danych i prototypowania:
+        Opis: Analitycy danych lub data scientists mogą preferować bezpośredni dostęp do surowych danych (Bronze) dla eksploracji i prototypowania, bez konieczności czekania na ich przetworzenie przez kolejne warstwy.
+    Wysokie koszty rozwoju i utrzymania potoków:
+        Opis: Tworzenie i utrzymanie potoków dla każdej warstwy wymaga znacznych nakładów pracy inżynierów danych, co może być kosztowne.
+    Niewystarczająca granularność dla niektórych scenariuszy:
+        Opis: Trzy warstwy mogą być zbyt ogólne dla bardzo złożonych procesów, które wymagałyby większej liczby pośrednich etapów transformacji, lub zbyt szczegółowe dla prostych.
+    Zwiększone ryzyko błędów w transformacji:
+        Opis: Im więcej kroków transformacji, tym większe ryzyko wprowadzenia błędów w danych podczas przechodzenia z jednej warstwy do drugiej.
+    Trudności w zarządzaniu danymi w czasie rzeczywistym:
+        Opis: Chociaż można adaptować medalion do strumieniowania, jego wsadowa natura często oznacza, że dane w warstwie Gold nie są dostępne w czasie rzeczywistym, co jest wymagane przez niektóre aplikacje.
+    Wyzwania związane z prywatnością i bezpieczeństwem:
+        Opis: Zapewnienie odpowiedniego poziomu bezpieczeństwa i prywatności w każdej warstwie (np. anonimizacja, maskowanie danych) może być złożone i wymagać skrupulatnego planowania.
+    Brak jasnych wytycznych dla wszystkich przypadków:
+        Opis: Definicje "Bronze", "Silver" i "Gold" mogą być ogólne, co prowadzi do niejasności w implementacji i różnych interpretacji w zespołach.
+    Potrzeba ciągłej refaktoryzacji:
+        Opis: W miarę ewolucji wymagań biznesowych, schematy i logika transformacji mogą wymagać ciągłej refaktoryzacji w wielu warstwach.
+    Bariery w adopcji "Data Mesh":
+        Opis: W kontekście architektury Data Mesh, gdzie dane są traktowane jako produkty, sztywność medalionu może być sprzeczna z ideą decentralizacji i autonomii domen danych.
+    Optymalizacja wydajności może być trudna:
+        Opis: Optymalizacja zapytań i wydajności w środowisku, gdzie dane są wielokrotnie kopiowane i transformowane, może być bardziej złożona niż w prostszych architekturach.
+    Nie zawsze potrzebna warstwa Gold dla wszystkich danych:
+        Opis: Nie wszystkie dane muszą być w pełni ustrukturyzowane i zoptymalizowane do raportowania w warstwie Gold. Niektóre dane mogą być używane bezpośrednio z warstwy Silver lub nawet Bronze, co sprawia, że warstwa Gold jest nadmiarowa dla tych konkretnych przypadków użycia.
+
+Kiedy medalion może nie być potrzebny?
+
+    Małe projekty lub MVP (Minimum Viable Product): Na początek, prostsza struktura (np. tylko Bronze i Silver) może być wystarczająca, aby szybko dostarczyć wartość.
+    Jednorazowe analizy ad-hoc: Jeśli dane są używane sporadycznie do jednorazowych analiz, pełna transformacja do warstwy Gold może być marnowaniem zasobów.
+    Dane wykorzystywane wyłącznie przez Data Scientists: Jeśli zespół Data Science potrzebuje elastycznego dostępu do surowych danych i preferuje samodzielne ich przygotowanie, warstwa Silver i Gold może nie być kluczowa.
+    Dane o niskiej wartości biznesowej: Dla danych, które nie są krytyczne dla raportowania lub modeli produkcyjnych, pełne ich przetworzenie przez architekturę medalionu może być nieuzasadnione ekonomicznie.
